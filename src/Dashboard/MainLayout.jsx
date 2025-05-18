@@ -235,21 +235,16 @@ const MainLayout = () => {
               </IconButton>
             </Box>
 
-            <Typography
-              variant="h6"
-              noWrap
-              component="div"
-              sx={{
-                flexGrow: 0,
-                mr: 2,
-                display: { xs: 'flex' },
-                fontWeight: 700,
-                fontSize: { xs: '1.1rem', md: '1.3rem' }
+            <img
+              src="https://scontent.fhan20-1.fna.fbcdn.net/v/t39.30808-6/326378785_478202867859704_571435564450845863_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeEJBz351yojE8ri6qvoyWNLWBZBDgcpzCpYFkEOBynMKqqL3X4zx0LaFJtPfZ4MIM1d82NkImanDX8Vqy8vRXVn&_nc_ohc=S3bmSrRFVz8Q7kNvwH8tA8l&_nc_oc=AdlegciFiDTydkiFZBYceE3xhAUuvZVVXEwohGH8U7oUF5-klGdOGH6V0ltzAaaVZHvEhqhL_ZYBTP2skAaRR4ff&_nc_zt=23&_nc_ht=scontent.fhan20-1.fna&_nc_gid=oUnmUFAfcscA0oCZlHZRYA&oh=00_AfLtTRLgH2MCVhcon_633qVGtTrfdZngp27jir7KwXwuGg&oe=682FF35D"
+              alt="Thái Rise Logo"
+              style={{
+                marginRight: '16px',
+                display: 'flex',
+                width: '60px',
+                height: 'auto'
               }}
-            >
-              Thái Rise
-            </Typography>
-
+            />
             {/* Navigation Tabs for larger screens */}
             <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, ml: 1 }}>
               <Tabs
