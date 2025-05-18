@@ -182,7 +182,7 @@ const MainLayout = () => {
     <div>
       <Toolbar sx={{ justifyContent: 'center' }}>
         <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
-          Khánh Care
+          Thái Rise
         </Typography>
       </Toolbar>
       <Divider />
@@ -247,7 +247,7 @@ const MainLayout = () => {
                 fontSize: { xs: '1.1rem', md: '1.3rem' }
               }}
             >
-              Khánh Care
+              Thái Rise
             </Typography>
 
             {/* Navigation Tabs for larger screens */}

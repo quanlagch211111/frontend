@@ -2,70 +2,58 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-  Box,
+  Layout,
   Typography,
-  Paper,
-  Grid,
-  TextField,
+  Card,
+  Form,
+  Input,
   Button,
   Divider,
-  CircularProgress,
+  Spin,
   Alert,
   Avatar,
-  IconButton,
   Tabs,
-  Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  InputAdornment
-} from '@mui/material';
-import {
-  Chip,
-  FormControl,
-  InputLabel,
+  Modal,
+  Space,
   Select,
-  MenuItem,
-  FormControlLabel,
   Switch,
-} from '@mui/material';
-import { CloudUpload as UploadIcon } from '@mui/icons-material';
+  Row,
+  Col,
+  Tag,
+  Upload,
+  message
+} from 'antd';
 import {
-  Save as SaveIcon,
-  Edit as EditIcon,
-  Lock as LockIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon
-} from '@mui/icons-material';
+  UploadOutlined,
+  SaveOutlined,
+  EditOutlined,
+  LockOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  UserOutlined,
+  SettingOutlined,
+  GlobalOutlined,
+  BellOutlined
+} from '@ant-design/icons';
 import { useAuth } from '../services/AuthProvider';
 import { toast } from 'react-toastify';
+import moment from 'moment';
+import 'moment/locale/vi';
 
-// TabPanel component for tab content
-function TabPanel(props) {
-  const { children, value, index, ...other } = props;
+moment.locale('vi');
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`profile-tabpanel-${index}`}
-      aria-labelledby={`profile-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ pt: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
+const { Title, Text, Paragraph } = Typography;
+const { TabPane } = Tabs;
+const { Option } = Select;
+const { Content } = Layout;
+const { confirm } = Modal;
 
 const UserProfile = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
+  const [preferencesForm] = Form.useForm();
 
   const [profileData, setProfileData] = useState({
     username: '',
@@ -75,18 +63,19 @@ const UserProfile = () => {
     avatar: '',
     role: '',
     preferences: {
-      language: 'en',
+      language: 'vi',
       notifications: true
     }
   });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [tabValue, setTabValue] = useState(0);
+  const [tabKey, setTabKey] = useState('1');
   const [avatarFile, setAvatarFile] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const fileInputRef = useRef(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
 
   // Password change
   const [passwordData, setPasswordData] = useState({
@@ -94,16 +83,7 @@ const UserProfile = () => {
     newPassword: '',
     confirmPassword: ''
   });
-  const [passwordErrors, setPasswordErrors] = useState({});
   const [changingPassword, setChangingPassword] = useState(false);
-  const [showPasswords, setShowPasswords] = useState({
-    currentPassword: false,
-    newPassword: false,
-    confirmPassword: false
-  });
-
-  // Password confirmation dialog
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // Fetch user profile data
   const fetchProfile = async () => {
@@ -114,19 +94,33 @@ const UserProfile = () => {
       const response = await axios.get('/api/users/profile');
 
       if (response.data.success) {
-        setProfileData({
+        const userData = {
           ...response.data.user,
           preferences: response.data.user.preferences || {
-            language: 'en',
+            language: 'vi',
             notifications: true
           }
+        };
+        
+        setProfileData(userData);
+        form.setFieldsValue({
+          username: userData.username,
+          email: userData.email,
+          phone: userData.phone || '',
+          address: userData.address || '',
+          avatar: userData.avatar || ''
+        });
+        
+        preferencesForm.setFieldsValue({
+          language: userData.preferences.language || 'vi',
+          notifications: userData.preferences.notifications !== false
         });
       } else {
-        setError('Failed to load profile data');
+        setError('Không thể tải thông tin hồ sơ');
       }
     } catch (err) {
-      console.error('Error fetching profile:', err);
-      setError(err.response?.data?.message || 'Error loading profile');
+      console.error('Lỗi khi tải hồ sơ:', err);
+      setError(err.response?.data?.message || 'Lỗi khi tải hồ sơ');
     } finally {
       setLoading(false);
     }
@@ -136,198 +130,142 @@ const UserProfile = () => {
     fetchProfile();
   }, []);
 
-  // Handle tab change
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
-
-  // Handle profile form changes
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name.includes('.')) {
-      const [parent, field] = name.split('.');
-      setProfileData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [field]: value
-        }
-      }));
-    } else {
-      setProfileData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  // Handle checkbox changes
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-
-    if (name.includes('.')) {
-      const [parent, field] = name.split('.');
-      setProfileData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [field]: checked
-        }
-      }));
-    } else {
-      setProfileData(prev => ({
-        ...prev,
-        [name]: checked
-      }));
-    }
-  };
-
-  // Handle avatar URL change
-  const handleAvatarChange = (e) => {
-    setProfileData(prev => ({
-      ...prev,
-      avatar: e.target.value
-    }));
-  };
-
   // Handle profile form submission
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
+  const handleProfileSubmit = async (values) => {
     setSaving(true);
     setError(null);
     setSuccess(null);
 
     try {
       const response = await axios.put('/api/users/profile', {
-        username: profileData.username,
-        address: profileData.address,
-        phone: profileData.phone,
-        avatar: profileData.avatar,
+        username: values.username,
+        address: values.address,
+        phone: values.phone,
+        avatar: values.avatar,
         preferences: profileData.preferences
       });
 
       if (response.data.success) {
-        setSuccess('Profile updated successfully');
-        toast.success('Profile updated successfully');
+        setSuccess('Cập nhật hồ sơ thành công');
+        toast.success('Cập nhật hồ sơ thành công');
+        fetchProfile(); // Refresh profile data
       } else {
-        setError('Failed to update profile');
+        setError('Không thể cập nhật hồ sơ');
       }
     } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err.response?.data?.message || 'Error updating profile');
-      toast.error(err.response?.data?.message || 'Error updating profile');
+      console.error('Lỗi khi cập nhật hồ sơ:', err);
+      setError(err.response?.data?.message || 'Lỗi khi cập nhật hồ sơ');
+      toast.error(err.response?.data?.message || 'Lỗi khi cập nhật hồ sơ');
     } finally {
       setSaving(false);
     }
   };
 
-  // Handle password form changes
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Clear error for this field if any
-    if (passwordErrors[name]) {
-      setPasswordErrors(prev => ({
-        ...prev,
-        [name]: null
-      }));
-    }
-  };
-
-  // Toggle password visibility
-  const togglePasswordVisibility = (field) => {
-    setShowPasswords(prev => ({
-      ...prev,
-      [field]: !prev[field]
-    }));
-  };
-
-  // Validate password form
-  const validatePasswordForm = () => {
-    const errors = {};
-
-    if (!passwordData.currentPassword) {
-      errors.currentPassword = 'Current password is required';
-    }
-
-    if (!passwordData.newPassword) {
-      errors.newPassword = 'New password is required';
-    } else if (passwordData.newPassword.length < 6) {
-      errors.newPassword = 'Password must be at least 6 characters';
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-
-    setPasswordErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Handle password form submission
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validatePasswordForm()) return;
-
-    setConfirmDialogOpen(true);
-  };
-
-  // Confirm and submit password change
-  const confirmPasswordChange = async () => {
-    setChangingPassword(true);
+  // Handle preferences form submission
+  const handlePreferencesSubmit = async (values) => {
+    setSaving(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await axios.put('/api/users/change-password', {
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword
+      const updatedProfileData = {
+        ...profileData,
+        preferences: {
+          language: values.language,
+          notifications: values.notifications
+        }
+      };
+
+      const response = await axios.put('/api/users/profile', {
+        username: profileData.username,
+        address: profileData.address,
+        phone: profileData.phone,
+        avatar: profileData.avatar,
+        preferences: updatedProfileData.preferences
       });
 
       if (response.data.success) {
-        setSuccess('Password changed successfully');
-        toast.success('Password changed successfully. Please login again.');
-        setTimeout(() => {
-          // Force re-login for security
-          logout();
-          navigate('/login');
-        }, 2000);
+        setProfileData(updatedProfileData);
+        setSuccess('Cập nhật tùy chọn thành công');
+        toast.success('Cập nhật tùy chọn thành công');
       } else {
-        setError('Failed to change password');
+        setError('Không thể cập nhật tùy chọn');
       }
     } catch (err) {
-      console.error('Error changing password:', err);
-      setError(err.response?.data?.message || 'Error changing password');
-      toast.error(err.response?.data?.message || 'Error changing password');
+      console.error('Lỗi khi cập nhật tùy chọn:', err);
+      setError(err.response?.data?.message || 'Lỗi khi cập nhật tùy chọn');
+      toast.error(err.response?.data?.message || 'Lỗi khi cập nhật tùy chọn');
     } finally {
-      setChangingPassword(false);
-      setConfirmDialogOpen(false);
+      setSaving(false);
     }
   };
 
-  const handleFileSelect = (event) => {
-    if (event.target.files && event.target.files[0]) {
-      setAvatarFile(event.target.files[0]);
+  // Handle password form submission
+  const handlePasswordSubmit = async (values) => {
+    Modal.confirm({
+      title: 'Xác nhận đổi mật khẩu',
+      content: 'Bạn có chắc chắn muốn thay đổi mật khẩu? Bạn sẽ được đăng xuất và cần đăng nhập lại bằng mật khẩu mới.',
+      onOk: async () => {
+        setChangingPassword(true);
+        setError(null);
+        setSuccess(null);
 
-      // Preview the image
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileData(prev => ({
-          ...prev,
-          avatarPreview: e.target.result
-        }));
-      };
-      reader.readAsDataURL(event.target.files[0]);
-    }
+        try {
+          const response = await axios.put('/api/users/change-password', {
+            currentPassword: values.currentPassword,
+            newPassword: values.newPassword
+          });
+
+          if (response.data.success) {
+            setSuccess('Đổi mật khẩu thành công');
+            toast.success('Đổi mật khẩu thành công. Vui lòng đăng nhập lại.');
+            setTimeout(() => {
+              // Force re-login for security
+              logout();
+              navigate('/login');
+            }, 2000);
+          } else {
+            setError('Không thể đổi mật khẩu');
+          }
+        } catch (err) {
+          console.error('Lỗi khi đổi mật khẩu:', err);
+          setError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu');
+          toast.error(err.response?.data?.message || 'Lỗi khi đổi mật khẩu');
+        } finally {
+          setChangingPassword(false);
+        }
+      }
+    });
   };
 
-  // Add this function to handle avatar upload
+  // Handle file upload
+  const handleBeforeUpload = (file) => {
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      message.error('Bạn chỉ có thể tải lên tệp hình ảnh!');
+      return Upload.LIST_IGNORE;
+    }
+
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error('Hình ảnh phải nhỏ hơn 5MB!');
+      return Upload.LIST_IGNORE;
+    }
+
+    setAvatarFile(file);
+    
+    // Preview the image
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAvatarPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Prevent automatic upload
+    return false;
+  };
+
+  // Handle avatar upload
   const handleAvatarUpload = async () => {
     if (!avatarFile) return;
 
@@ -343,349 +281,313 @@ const UserProfile = () => {
       });
 
       if (response.data.success) {
-        toast.success('Avatar uploaded successfully');
+        toast.success('Tải ảnh đại diện thành công');
         setProfileData(prev => ({
           ...prev,
-          avatar: response.data.user.avatar,
-          avatarPreview: null
+          avatar: response.data.user.avatar
         }));
+        form.setFieldsValue({ avatar: response.data.user.avatar });
+        setAvatarPreview(null);
         setAvatarFile(null);
       } else {
-        toast.error('Failed to upload avatar');
+        toast.error('Không thể tải lên ảnh đại diện');
       }
     } catch (err) {
-      console.error('Error uploading avatar:', err);
-      toast.error(err.response?.data?.message || 'Error uploading avatar');
+      console.error('Lỗi khi tải ảnh đại diện:', err);
+      toast.error(err.response?.data?.message || 'Lỗi khi tải ảnh đại diện');
     } finally {
       setUploadingAvatar(false);
     }
   };
 
-
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}>
-        <CircularProgress />
-      </Box>
+      <div style={{ textAlign: 'center', padding: '40px 0' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: 16 }}>Đang tải thông tin hồ sơ...</div>
+      </div>
     );
   }
 
+  const getRoleColor = (role) => {
+    switch (role) {
+      case 'ADMIN': return 'red';
+      case 'SUPPORT': return 'purple';
+      case 'AGENT': return 'blue';
+      default: return 'default';
+    }
+  };
+
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        User Profile
-      </Typography>
+    <Layout style={{ background: 'transparent', padding: '0' }}>
+      <Content>
+        <Title level={3}>Hồ sơ người dùng</Title>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <Avatar
-            src={profileData.avatar}
-            alt={profileData.username}
-            sx={{ width: 80, height: 80, mr: 3 }}
-          />
-          <Box>
-            <Typography variant="h5">{profileData.username}</Typography>
-            <Typography variant="body1" color="textSecondary">
-              {profileData.email}
-            </Typography>
-            <Chip
-              label={profileData.role || 'USER'}
-              color={
-                profileData.role === 'ADMIN' ? 'error' :
-                  profileData.role === 'SUPPORT' || profileData.role === 'AGENT' ? 'primary' : 'default'
-              }
-              size="small"
-              sx={{ mt: 1 }}
+        <Card style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
+            <Avatar 
+              size={80} 
+              src={avatarPreview || profileData.avatar}
+              icon={<UserOutlined />}
+              style={{ marginRight: 24 }}
             />
-          </Box>
-        </Box>
+            <div>
+              <Title level={4} style={{ margin: 0 }}>{profileData.username}</Title>
+              <Text type="secondary">{profileData.email}</Text>
+              <div style={{ marginTop: 8 }}>
+                <Tag color={getRoleColor(profileData.role)}>
+                  {profileData.role || 'USER'}
+                </Tag>
+              </div>
+            </div>
+          </div>
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label="Profile Information" id="profile-tab-0" />
-            <Tab label="Change Password" id="profile-tab-1" />
-            <Tab label="Preferences" id="profile-tab-2" />
-          </Tabs>
-        </Box>
+          <Tabs activeKey={tabKey} onChange={setTabKey}>
+            <TabPane 
+              tab={
+                <span>
+                  <UserOutlined />
+                  Thông tin cá nhân
+                </span>
+              } 
+              key="1"
+            >
+              {error && <Alert message="Lỗi" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+              {success && <Alert message="Thành công" description={success} type="success" showIcon style={{ marginBottom: 16 }} />}
 
-        {/* Profile Information Tab */}
-        <TabPanel value={tabValue} index={0}>
-          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
-
-          <form onSubmit={handleProfileSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Username"
-                  name="username"
-                  value={profileData.username}
-                  onChange={handleProfileChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  value={profileData.email}
-                  disabled
-                  helperText="Email cannot be changed"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Phone Number"
-                  name="phone"
-                  value={profileData.phone || ''}
-                  onChange={handleProfileChange}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Address"
-                  name="address"
-                  value={profileData.address || ''}
-                  onChange={handleProfileChange}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle1" gutterBottom>Profile Picture</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar
-                      src={profileData.avatarPreview || profileData.avatar}
-                      alt={profileData.username}
-                      sx={{ width: 100, height: 100, mr: 2 }}
-                    />
-                    <Box>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        ref={fileInputRef}
-                        onChange={handleFileSelect}
-                      />
-                      <Button
-                        variant="outlined"
-                        startIcon={<UploadIcon />}
-                        onClick={() => fileInputRef.current.click()}
-                        sx={{ mr: 1 }}
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleProfileSubmit}
+                initialValues={{
+                  username: profileData.username,
+                  email: profileData.email,
+                  phone: profileData.phone || '',
+                  address: profileData.address || '',
+                  avatar: profileData.avatar || ''
+                }}
+              >
+                <Row gutter={16}>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="username"
+                      label="Tên người dùng"
+                      rules={[{ required: true, message: 'Vui lòng nhập tên người dùng' }]}
+                    >
+                      <Input placeholder="Nhập tên người dùng" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="email"
+                      label="Email"
+                    >
+                      <Input disabled />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="phone"
+                      label="Số điện thoại"
+                    >
+                      <Input placeholder="Nhập số điện thoại" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="address"
+                      label="Địa chỉ"
+                    >
+                      <Input placeholder="Nhập địa chỉ" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24}>
+                    <Divider orientation="left">Ảnh đại diện</Divider>
+                    
+                    <div style={{ marginBottom: 16 }}>
+                      <Upload
+                        name="avatar"
+                        listType="picture-card"
+                        showUploadList={false}
+                        beforeUpload={handleBeforeUpload}
+                        maxCount={1}
                       >
-                        Select Image
-                      </Button>
+                        <div>
+                          <UploadOutlined />
+                          <div style={{ marginTop: 8 }}>Chọn ảnh</div>
+                        </div>
+                      </Upload>
+                      
                       {avatarFile && (
                         <Button
-                          variant="contained"
-                          color="primary"
+                          type="primary"
                           onClick={handleAvatarUpload}
-                          disabled={uploadingAvatar}
+                          loading={uploadingAvatar}
+                          style={{ marginLeft: 16 }}
                         >
-                          {uploadingAvatar ? <CircularProgress size={24} /> : 'Upload'}
+                          Tải lên
                         </Button>
                       )}
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    You can also set your avatar using a URL:
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Avatar URL"
-                    name="avatar"
-                    value={profileData.avatar || ''}
-                    onChange={handleProfileChange}
-                    sx={{ mt: 1 }}
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    </div>
+                    
+                    <Text type="secondary">
+                      Bạn cũng có thể đặt ảnh đại diện bằng URL:
+                    </Text>
+                    
+                    <Form.Item
+                      name="avatar"
+                      style={{ marginTop: 8 }}
+                    >
+                      <Input placeholder="Nhập URL ảnh đại diện" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                
+                <Form.Item style={{ marginTop: 16, textAlign: 'right' }}>
                   <Button
-                    type="submit"
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    disabled={saving}
+                    type="primary"
+                    htmlType="submit"
+                    icon={<SaveOutlined />}
+                    loading={saving}
                   >
-                    {saving ? <CircularProgress size={24} /> : 'Save Changes'}
+                    Lưu thay đổi
                   </Button>
-                </Box>
-              </Grid>
-            </Grid>
-          </form>
-        </TabPanel>
+                </Form.Item>
+              </Form>
+            </TabPane>
+            
+            <TabPane 
+              tab={
+                <span>
+                  <LockOutlined />
+                  Đổi mật khẩu
+                </span>
+              } 
+              key="2"
+            >
+              {error && <Alert message="Lỗi" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+              {success && <Alert message="Thành công" description={success} type="success" showIcon style={{ marginBottom: 16 }} />}
 
-        {/* Change Password Tab */}
-        <TabPanel value={tabValue} index={1}>
-          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
-
-          <form onSubmit={handlePasswordSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Current Password"
+              <Form
+                form={passwordForm}
+                layout="vertical"
+                onFinish={handlePasswordSubmit}
+              >
+                <Form.Item
                   name="currentPassword"
-                  type={showPasswords.currentPassword ? 'text' : 'password'}
-                  value={passwordData.currentPassword}
-                  onChange={handlePasswordChange}
-                  error={!!passwordErrors.currentPassword}
-                  helperText={passwordErrors.currentPassword}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => togglePasswordVisibility('currentPassword')}
-                          edge="end"
-                        >
-                          {showPasswords.currentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="New Password"
+                  label="Mật khẩu hiện tại"
+                  rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+                >
+                  <Input.Password 
+                    placeholder="Nhập mật khẩu hiện tại" 
+                    iconRender={visible => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
+                  />
+                </Form.Item>
+                
+                <Form.Item
                   name="newPassword"
-                  type={showPasswords.newPassword ? 'text' : 'password'}
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  error={!!passwordErrors.newPassword}
-                  helperText={passwordErrors.newPassword || "Password must be at least 6 characters"}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => togglePasswordVisibility('newPassword')}
-                          edge="end"
-                        >
-                          {showPasswords.newPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Confirm New Password"
+                  label="Mật khẩu mới"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                    { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' }
+                  ]}
+                >
+                  <Input.Password 
+                    placeholder="Nhập mật khẩu mới" 
+                    iconRender={visible => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
+                  />
+                </Form.Item>
+                
+                <Form.Item
                   name="confirmPassword"
-                  type={showPasswords.confirmPassword ? 'text' : 'password'}
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  error={!!passwordErrors.confirmPassword}
-                  helperText={passwordErrors.confirmPassword}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => togglePasswordVisibility('confirmPassword')}
-                          edge="end"
-                        >
-                          {showPasswords.confirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  label="Xác nhận mật khẩu mới"
+                  rules={[
+                    { required: true, message: 'Vui lòng xác nhận mật khẩu mới' },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue('newPassword') === value) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(new Error('Hai mật khẩu không khớp!'));
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password 
+                    placeholder="Xác nhận mật khẩu mới" 
+                    iconRender={visible => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
+                  />
+                </Form.Item>
+                
+                <Form.Item style={{ marginTop: 16, textAlign: 'right' }}>
                   <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    startIcon={<LockIcon />}
-                    disabled={changingPassword}
+                    type="primary"
+                    htmlType="submit"
+                    icon={<LockOutlined />}
+                    loading={changingPassword}
                   >
-                    {changingPassword ? <CircularProgress size={24} /> : 'Change Password'}
+                    Đổi mật khẩu
                   </Button>
-                </Box>
-              </Grid>
-            </Grid>
-          </form>
-        </TabPanel>
-
-        {/* Preferences Tab */}
-        <TabPanel value={tabValue} index={2}>
-          <form onSubmit={handleProfileSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel id="language-label">Language</InputLabel>
-                  <Select
-                    labelId="language-label"
-                    name="preferences.language"
-                    value={profileData.preferences?.language || 'en'}
-                    onChange={handleProfileChange}
-                    label="Language"
-                  >
-                    <MenuItem value="en">English</MenuItem>
-                    <MenuItem value="es">Spanish</MenuItem>
-                    <MenuItem value="fr">French</MenuItem>
-                    <MenuItem value="de">German</MenuItem>
+                </Form.Item>
+              </Form>
+            </TabPane>
+            
+            <TabPane 
+              tab={
+                <span>
+                  <SettingOutlined />
+                  Tùy chọn
+                </span>
+              } 
+              key="3"
+            >
+              <Form
+                form={preferencesForm}
+                layout="vertical"
+                onFinish={handlePreferencesSubmit}
+                initialValues={{
+                  language: profileData.preferences?.language || 'vi',
+                  notifications: profileData.preferences?.notifications !== false
+                }}
+              >
+                <Form.Item
+                  name="language"
+                  label="Ngôn ngữ"
+                >
+                  <Select>
+                    <Option value="vi">Tiếng Việt</Option>
+                    <Option value="en">Tiếng Anh</Option>
+                    <Option value="fr">Tiếng Pháp</Option>
+                    <Option value="zh">Tiếng Trung</Option>
                   </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={profileData.preferences?.notifications || false}
-                      onChange={handleCheckboxChange}
-                      name="preferences.notifications"
-                      color="primary"
-                    />
-                  }
-                  label="Enable Email Notifications"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                </Form.Item>
+                
+                <Form.Item
+                  name="notifications"
+                  valuePropName="checked"
+                >
+                  <Switch 
+                    checkedChildren="Bật" 
+                    unCheckedChildren="Tắt" 
+                  /> <Text style={{ marginLeft: 8 }}>Nhận thông báo qua email</Text>
+                </Form.Item>
+                
+                <Form.Item style={{ marginTop: 16, textAlign: 'right' }}>
                   <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    startIcon={<SaveIcon />}
-                    disabled={saving}
+                    type="primary"
+                    htmlType="submit"
+                    icon={<SaveOutlined />}
+                    loading={saving}
                   >
-                    {saving ? <CircularProgress size={24} /> : 'Save Preferences'}
+                    Lưu tùy chọn
                   </Button>
-                </Box>
-              </Grid>
-            </Grid>
-          </form>
-        </TabPanel>
-      </Paper>
-
-      {/* Password Change Confirmation Dialog */}
-      <Dialog
-        open={confirmDialogOpen}
-        onClose={() => setConfirmDialogOpen(false)}
-      >
-        <DialogTitle>Confirm Password Change</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to change your password? You will be logged out and need to log in again with your new password.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmPasswordChange} color="primary" disabled={changingPassword}>
-            {changingPassword ? <CircularProgress size={24} /> : 'Confirm'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                </Form.Item>
+              </Form>
+            </TabPane>
+          </Tabs>
+        </Card>
+      </Content>
+    </Layout>
   );
 };
 

@@ -292,11 +292,11 @@ const TicketDetails = () => {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'OPEN': return 'Open';
-      case 'IN_PROGRESS': return 'In Progress';
-      case 'WAITING_CUSTOMER': return 'Waiting on Customer';
-      case 'RESOLVED': return 'Resolved';
-      case 'CLOSED': return 'Closed';
+      case 'OPEN': return 'Mở';
+      case 'IN_PROGRESS': return 'Đang tiến hành';
+      case 'WAITING_CUSTOMER': return 'Đang chờ khách hàng';
+      case 'RESOLVED': return 'Đã giải quyết';
+      case 'CLOSED': return 'Đã đóng';
       default: return status;
     }
   };
@@ -325,10 +325,10 @@ const TicketDetails = () => {
 
   const getPriorityText = (priority) => {
     switch (priority) {
-      case 'LOW': return 'Low';
-      case 'MEDIUM': return 'Medium';
-      case 'HIGH': return 'High';
-      case 'URGENT': return 'Urgent';
+      case 'LOW': return 'Thấp';
+      case 'MEDIUM': return 'Trung bình';
+      case 'HIGH': return 'Cao';
+      case 'URGENT': return 'Khẩn cấp';
       default: return priority;
     }
   };
@@ -345,14 +345,14 @@ const TicketDetails = () => {
   
   const getCategoryText = (category) => {
     switch (category) {
-      case 'REAL_ESTATE': return 'Real Estate';
-      case 'INSURANCE': return 'Insurance';
+      case 'REAL_ESTATE': return 'Bất Động Sản';
+      case 'INSURANCE': return 'Bảo Hiểm';
       case 'VISA': return 'Visa';
-      case 'TAX': return 'Tax';
-      case 'GENERAL': return 'General';
-      case 'ACCOUNT': return 'Account';
-      case 'BILLING': return 'Billing';
-      case 'TECHNICAL': return 'Technical';
+      case 'TAX': return 'Thuế';
+      case 'GENERAL': return 'Chung';
+      case 'ACCOUNT': return 'Tài khoản';
+      case 'BILLING': return 'Thanh toán';
+      case 'TECHNICAL': return 'Kỹ thuật';
       case 'SALES': return 'Sales';
       default: return category;
     }
@@ -597,7 +597,7 @@ const TicketDetails = () => {
                           onClose={() => handleRemoveAttachment(index)}
                         >
                           <a href={url} target="_blank" rel="noopener noreferrer">
-                            Attachment {index + 1}
+                            Tệp đính kèm {index + 1}
                           </a>
                         </Tag>
                       ))}
@@ -612,7 +612,7 @@ const TicketDetails = () => {
                     style={{ marginRight: 8 }}
                     disabled={sendingMessage}
                   >
-                    Add Attachment
+                    Thêm tệp đính kèm
                   </Button>
                   <Button
                     type="primary"
@@ -621,7 +621,7 @@ const TicketDetails = () => {
                     disabled={!messageContent.trim() || sendingMessage}
                     loading={sendingMessage}
                   >
-                    Send
+                    Gửi
                   </Button>
                 </div>
               </div>
@@ -821,31 +821,31 @@ const TicketDetails = () => {
           style={{ width: '100%' }}
           optionLabelProp="label"
         >
-          <Option value="OPEN" label="Open">
+          <Option value="OPEN" label="Mở">
             <Space>
               <MessageOutlined />
               <span>Mở</span>
             </Space>
           </Option>
-          <Option value="IN_PROGRESS" label="In Progress">
+          <Option value="IN_PROGRESS" label="Đang tiến hành">
             <Space>
               <SyncOutlined spin />
               <span>Đang tiến hành</span>
             </Space>
           </Option>
-          <Option value="WAITING_CUSTOMER" label="Waiting on Customer">
+          <Option value="WAITING_CUSTOMER" label="Đang chờ khách hàng">
             <Space>
               <ClockCircleOutlined />
               <span>Đang chờ khách hàng</span>
             </Space>
           </Option>
-          <Option value="RESOLVED" label="Resolved">
+          <Option value="RESOLVED" label="Đã giải quyết">
             <Space>
               <CheckCircleOutlined />
               <span>Đã giải quyết</span>
             </Space>
           </Option>
-          <Option value="CLOSED" label="Closed">
+          <Option value="CLOSED" label="Đã đóng">
             <Space>
               <CloseCircleOutlined />
               <span>Đóng</span>
